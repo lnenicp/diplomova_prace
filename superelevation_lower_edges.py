@@ -63,18 +63,16 @@ i = 0
 for j in groups:
     if i == 0:
         whereID = groups[i]
-        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_lyr', whereID)
-        arcpy.gp.ZonalStatisticsAsTable_sa('tmp_lyr', 'ORIG_FID', 'dmr','tmp_zonal_stat_table', 'DATA', 'RANGE')
-        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_relevant_polygons_lyr')
+        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_relevant_polygons_lyr', whereID)
+        arcpy.gp.ZonalStatisticsAsTable_sa('tmp_relevant_polygons_lyr', 'ORIG_FID', 'dmr','tmp_zonal_stat_table', 'DATA', 'RANGE')
         arcpy.MakeTableView_management('tmp_zonal_stat_table', 'tmp_zonal_stat_table_view')
         join_fc = arcpy.AddJoin_management('tmp_relevant_polygons_lyr', 'OBJECTID', 'tmp_zonal_stat_table_view',
                                            'ORIG_FID', 'KEEP_COMMON')
         arcpy.CopyFeatures_management(join_fc, 'tmp_superelevation')
     else:
         whereID = groups[i]
-        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_lyr', whereID)
-        arcpy.gp.ZonalStatisticsAsTable_sa('tmp_lyr', 'ORIG_FID', 'dmr', 'tmp_zonal_stat_table', 'DATA', 'RANGE')
-        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_relevant_polygons_lyr')
+        arcpy.MakeFeatureLayer_management('tmp_relevant_polygons', 'tmp_relevant_polygons_lyr', whereID)
+        arcpy.gp.ZonalStatisticsAsTable_sa('tmp_relevant_polygons_lyr', 'ORIG_FID', 'dmr', 'tmp_zonal_stat_table', 'DATA', 'RANGE')
         arcpy.MakeTableView_management('tmp_zonal_stat_table', 'tmp_zonal_stat_table_view')
         join_fc = arcpy.AddJoin_management('tmp_relevant_polygons_lyr', 'OBJECTID', 'tmp_zonal_stat_table_view',
                                            'ORIG_FID', 'KEEP_COMMON')
