@@ -9,6 +9,7 @@ arcpy.env.overwriteOutput = 1
 arcpy.env.workspace = ".\\lnenickova.gdb"
 workspace = arcpy.env.workspace
 
+
 def create_points_along_line(in_feature_class, sampling):
     '''
     Na jednolivych prvcich liniove vrstvy vytvori body v pozadovane vzdalenosti(na zaklade daneho atributu).
@@ -44,6 +45,7 @@ def create_points_along_line(in_feature_class, sampling):
     del s_cursor
     return output
 
+
 # calculate the length of the lower edge segment
 def calculate_sampling(feature_class, segmentation_size):
     '''
@@ -69,7 +71,6 @@ def calculate_sampling(feature_class, segmentation_size):
     return feature_class
 
 
-# vytvoreni SQL dotazu
 def create_sql_query(list_of_lists):
     '''
     Z listu jednotlivych ID predpripravi SQL dotazy, ktere vyberou vsechny ID z daneho seznamu.
@@ -90,3 +91,46 @@ def create_sql_query(list_of_lists):
         sql_list.append(sql_i)
         sql_i = []
     return sql_list
+
+
+def create_first_point_on_line(in_feature_class):
+    '''
+    Na jednolivych prvcich liniove vrstvy vytvori body na jejich pocatku.
+    :param in_feature_class: liniova vrstva
+    :return: Bodovou vrstvu, kde jsou body umiteny na pocatku linii vstupni vrstvy
+    '''
+    array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
+    points_list = list() # list pro zapisovani souradnic jednotlivych bodu
+    output = 'tmp_first_points'
+    output_path = os.path.join(workspace, 'tmp_fc' ) # muze vzniknout problem s cestou!!!
+    s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'OBJECTID'])
+    for row in s_cursor:
+        shape = row[0]
+        id = row[1]
+        array_points = shape.getPart()
+        line = arcpy.Polyline(array_points) # (+radek vys) "rozdeli linii na jednotlive body"
+        point = line.positionAlongLine(0) # zjisi souradnice pocatecniho bodu
+        points_list.append((id, (point.getPart().X, point.getPart().Y))) # zapise souradnice bodu do points_list
+        # prevede list se souradnicemi na geometrii
+        array = numpy.array([points_list], numpy.dtype([('id_line',numpy.int32),('XY', '<f8', 2)]))
+    sr = arcpy.Describe(in_feature_class).spatialReference
+    arcpy.da.NumPyArrayToFeatureClass(array, output_path, ['XY'], sr) # vytvoreni nove fc ze vzniklych bodu
+    # fce NumPyArrayToFeatureClass neumoznuje prepis jiz existujicich souboru, proto je tu klicka s kopirovanim a mazanim
+    arcpy.CopyFeatures_management('tmp_fc', output)
+    arcpy.Delete_management('tmp_fc')
+    del s_cursor
+    return output
+
+def create_list_of_values(in_feature_class, attribute):
+    '''
+    Pro zvolenou vtupni fc vypise hodnoty pozadovaneho atributu
+    :param in_feature_class: fc libovolne geomtrie
+    :param attribute: pozadovany atribut
+    :return: list hodnot zadaneho atributu
+    '''
+    list = []
+    s_cursor = arcpy.da.SearchCursor(in_feature_class, [attribute])
+    for row in s_cursor:
+        list.append(row[0])
+    del s_cursor
+    return list
