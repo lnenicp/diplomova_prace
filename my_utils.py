@@ -134,3 +134,100 @@ def create_list_of_values(in_feature_class, attribute):
         list.append(row[0])
     del s_cursor
     return list
+
+
+def calculate_contour_size (map_scale, contour_size_map):
+    '''
+    Prepocita pozadovana sirku kontury z mm v mape na m ve skutecnoti.
+    :param map_scale: meritkove cislo mapy
+    :param contour_size_map: pozadovana tloustka kontury v mape (mm)
+    :return: hodnotu pro vytvoreni jednostranneho bufferu
+    '''
+    contour_size_real = contour_size_map  * map_scale/1000
+    return contour_size_real
+
+
+def create_segments(line_fc, segmentation_size, output_fc):
+    '''
+    Rozdeli linie na segmenty o optimalni velikosti. Nebo-li vypocita delku segmentu tak,
+    aby se co nejvice blizila zadane hodnote a zaroven byla linie rozdelena na stejne dlouhe segmenty.
+    :param line_fc: vstupni liniova vrstva
+    :param segmentation_size: pozadovana velikost segmentu
+    :return: line_fc jednotlivych segmentu
+    '''
+    # priprava vystupni fc
+    sr = arcpy.Describe(line_fc).spatialReference
+    arcpy.CreateFeatureclass_management(workspace, output_fc, 'POLYLINE', '', '', '', sr)
+    arcpy.AddField_management(output_fc, 'id_line', 'SHORT')
+
+    s_cursor = arcpy.da.SearchCursor(line_fc, ['Shape@', 'Shape_Length', 'OBJECTID'])
+    for row in s_cursor:
+        shape = row[0]
+        lenght = row[1]
+        id_line = row[2]
+        array_points = shape.getPart()
+        line = arcpy.Polyline(array_points)
+
+        # vypocet mnozstvi segmentu pro segmentacii linie
+        segments_count = int(round(lenght / segmentation_size))
+
+        i_cur = arcpy.da.InsertCursor(output_fc, ['Shape@', 'id_line'])
+        if segments_count > 0:
+            for k in range(0, segments_count):
+                segment = line.segmentAlongLine(k / float(segments_count), ((k + 1) / float(segments_count)), True)
+                i_cur.insertRow([segment, id_line])
+        # pokud je linie kratsi nez pozadovana delka segmentu -- nacte se primo linie
+        if segments_count == 0:
+            i_cur.insertRow([shape, id_line])
+        del i_cur
+    del s_cursor
+    return output_fc
+
+def classify_contour_size(line_superelev, map_scale, buffer_type):
+    '''
+    #Priradi tloustku kontury ke kazdemu segmentu dle hodnoty prevyseni a pozadovanemu typu bufferu.
+    #:param line_superelev: line fc se segmenty s urcenym prevysenim
+    #:param map_scale: meritkove cislo mapy
+    #:param buffer_type: zadat honotu 'ROUND' pro segmenty udolnic a 'RIGHT' pro segmenty dolnich hran
+    #:return: novy atribut ve svtupni vrstve
+    '''
+    if buffer_type == 'FULL':
+        bt = 2
+    if buffer_type == 'RIGHT':
+        bt = 1
+    arcpy.AddField_management (line_superelev, 'contour_size', 'DOUBLE')
+    u_cur = arcpy.da.UpdateCursor(line_superelev, ['superelevation','contour_size'])
+    for row in u_cur:
+        superelevation = row[0]
+        if superelevation <= 10:
+            value = (calculate_contour_size(map_scale, 0.25))/bt
+        if 10 < superelevation <= 25:
+            value = (calculate_contour_size(map_scale, 0.4)) / bt
+        if superelevation > 25:
+            value = (calculate_contour_size(map_scale, 0.6)) / bt
+        row[1] = value
+        u_cur.updateRow(row)
+    return line_superelev
+
+def select_end_segments(line_superelev, output_fc):
+    # vytvoreni prazdne fc (odpovidajicich atributu)
+    arcpy.CopyFeatures_management(line_superelev, output_fc)
+    arcpy.DeleteRows_management (output_fc)
+
+    # vytvoreni vrstvy krajnich segmentu linii - udolnic
+    line_id_list = create_list_of_values(line_superelev, 'id_line')
+    i = 0 # indexovani v list_id_line
+    for row in  line_id_list:
+        whereID = '"id_line" = {}'.format(line_id_list[i])
+        arcpy.MakeFeatureLayer_management(line_superelev, 'tmp_one_line', whereID)
+        segment_id_list = create_list_of_values('tmp_one_line', 'OBJECTID')
+        min_id = min(segment_id_list)
+        max_id = max(segment_id_list)
+
+        whereID_seg = '"OBJECTID" = {} OR "OBJECTID" = {}'.format(min_id, max_id)
+        arcpy.MakeFeatureLayer_management(line_superelev, 'tmp_segments_lyr', whereID_seg)
+        seg = arcpy.CopyFeatures_management('tmp_segments_lyr', 'tmp_segments')
+        arcpy.Append_management(seg, output_fc)
+        i = i + 1
+    return output_fc
+

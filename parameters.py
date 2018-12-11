@@ -14,3 +14,10 @@ point_buffer_size = 5 # area radius for calculating value of maximal superelevat
 segmentation_size_valley = segmentation_size/4
 minimum_wall_height = 2 # value of minimal wall height [m]
 output2 = 'superelevation_valley' # line fc output
+
+'''parametrs of output_buffer.py'''
+valley_superelev = 'superelevation_valley' #output2
+lower_edges_superelev = 'superelevation_lower_edges' # output
+map_scale = 1000
+# in_wall - ze scriptu superelevation_lower_edges.py
+output98 = 'rocks_contours'
