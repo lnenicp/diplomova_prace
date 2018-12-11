@@ -23,18 +23,14 @@ segmentation_size = parameters.segmentation_size
 buffer_zone = parameters.buffer_zone
 distance_polygons = parameters.distance_polygons
 
+
 # create fc of lower edges
 arcpy.MakeFeatureLayer_management (in_edges, 'in_edges_lyr')
 arcpy.SelectLayerByAttribute_management('in_edges_lyr', 'NEW_SELECTION', lower_edge_description)
-arcpy.CopyFeatures_management('in_edges_lyr', 'tmp_lower_edges')
-
-# calculate the length of the lower edge segment
-my_utils.calculate_sampling('tmp_lower_edges', segmentation_size)
+lower_edges = arcpy.CopyFeatures_management('in_edges_lyr', 'tmp_lower_edges')
 
 # lower edge segmentation
-# nejdrive se vygeneruji body v danych vzdalenostech, podle nich se linie deli
-sampling_points = my_utils.create_points_along_line('tmp_lower_edges', 'sampling')
-arcpy.SplitLineAtPoint_management('tmp_lower_edges', sampling_points, output, '1 Meters')
+output = my_utils.create_segments(lower_edges, segmentation_size, output)
 
 # creating a buffer around the bottom edge segment
 arcpy.Buffer_analysis(output, 'tmp_lower_edges_seg_buff', buffer_zone, 'RIGHT', 'FLAT', 'NONE','#')
@@ -42,7 +38,7 @@ arcpy.Buffer_analysis(output, 'tmp_lower_edges_seg_buff', buffer_zone, 'RIGHT', 
 # cropping, selecting the relevant polygon
 # provede se prunik bufferu kolem dolni hrany a plochou steny
 # nasledne se vyberou jen ty polygony, jejichz ID je shodne s ID segmentu, ktereho se dotykaji (shodna hrana)
-arcpy.Clip_analysis('tmp_lower_edges_seg_buff',in_wall,'tmp_clip','')
+arcpy.Clip_analysis('tmp_lower_edges_seg_buff', in_wall,'tmp_clip','')
 arcpy.MultipartToSinglepart_management('tmp_clip', 'tmp_clip_expl')
 arcpy.SpatialJoin_analysis ('tmp_clip_expl', output, 'tmp_clip_expl_join', 'JOIN_ONE_TO_MANY', '', '',
                             'INTERSECT', '', '')
@@ -90,12 +86,4 @@ list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
 
-fileds = [f.name for f in arcpy.ListFields(output)]
-fileds.remove('superelevation')
-fileds.remove('OBJECTID')
-fileds.remove('Shape_Length')
-fileds.remove('Shape')
-arcpy.DeleteField_management (output, fileds)
-
 arcpy.Delete_management('tmp_zonal_stat_table')
-
