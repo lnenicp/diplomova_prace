@@ -53,6 +53,7 @@ valley_max_superelev = my_utils.create_list_of_values(first_points, 'max_superel
 sr = arcpy.Describe(valley).spatialReference
 arcpy.CreateFeatureclass_management(workspace, output2, 'POLYLINE', '', '', '', sr)
 arcpy.AddField_management (output2, 'superelevation', 'DOUBLE')
+arcpy.AddField_management (output2, 'id_line', 'SHORT')
 
 ## pro kazdou udolnici se provede segmentace a nasledne se urci/interpoluje hodnota prevyseni pro jednotlive segmenty
 # tyto udaje/hodnty se importuju do (vyse) vytvorene vystupni fc
@@ -61,7 +62,7 @@ vms = 0 # index pro hledani v listech (vms = valley_max_superelev)
 s_cursor = arcpy.da.SearchCursor(valley, ['Shape@', 'OBJECTID'])
 for row in s_cursor:
     shape = row[0]
-    id = row[1]
+    id_line = row[1]
     array_points = shape.getPart()
     line = arcpy.Polyline(array_points)
 
@@ -91,11 +92,11 @@ for row in s_cursor:
     addition_list.append(minimum)  # nacte minimum "k poslednimu prvku"
 
     # naplneni vystupni vrstvy daty - vlozeni geometrie, id objektu a prevyseni
-    i_cur = arcpy.da.InsertCursor(output2, ['Shape@', 'OBJECTID', 'superelevation'])
+    i_cur = arcpy.da.InsertCursor(output2, ['Shape@', 'OBJECTID', 'id_line', 'superelevation'])
     al = 0 # indexovani v additon_list
     for k in range(0,segments_count):
         segment = line.segmentAlongLine(k/float(segments_count), ((k+1)/float(segments_count)), True)
-        i_cur.insertRow([segment, id, addition_list[al]])
+        i_cur.insertRow([segment, idv, id_line, addition_list[al]])
         al = al + 1
     del i_cur
 
