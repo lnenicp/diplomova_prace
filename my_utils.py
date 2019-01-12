@@ -6,7 +6,7 @@ import numpy
 arcpy.CheckOutExtension("Spatial")
 
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = ".\\lnenickova.gdb"
+arcpy.env.workspace = ".\\PB.gdb"
 workspace = arcpy.env.workspace
 
 
@@ -85,9 +85,11 @@ def create_sql_query(list_of_lists):
             j_str = str(j)
             if len(sql_i)==0:
                 sql_i = '"OBJECTID" = {}'.format(j_str)
+                # sql_i = '"seg_id" = {}'.format(j_str)
             else:
                 i = str(sql_i)
                 sql_i = i + ' OR "OBJECTID" = {}'.format(j_str)
+                #sql_i = '"seg_id" = {}'.format(j_str)
         sql_list.append(sql_i)
         sql_i = []
     return sql_list

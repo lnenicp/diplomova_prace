@@ -9,7 +9,7 @@ start = time.time()
 arcpy.CheckOutExtension('Spatial')
 
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = '.\\lnenickova.gdb'
+arcpy.env.workspace = '.\\PB.gdb'
 workspace = arcpy.env.workspace
 
 
@@ -40,7 +40,11 @@ for row in u_cursor:
 
     # vazeny prumer (hodnota prevyseni vzhledem k delce linie)
     max_c = [length[j] * superelevation[j] for j in range(0,len(superelevation))]
-    maximum = sum(max_c) / sum(length)
+    # pro pripad chyby ve skriptu "superelevation_lower_edges.py"
+    try:
+        maximum = sum(max_c) / sum(length)
+    except ZeroDivisionError:
+        maximum = 0
     row[0] = maximum
     u_cursor.updateRow(row)
     i = i + 1
