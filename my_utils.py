@@ -149,7 +149,7 @@ def calculate_contour_size (map_scale, contour_size_map):
     return contour_size_real
 
 
-def create_segments(line_fc, segmentation_size, output_fc):
+def create_segments(line_fc, segmentation_size):
     '''
     Rozdeli linie na segmenty o optimalni velikosti. Nebo-li vypocita delku segmentu tak,
     aby se co nejvice blizila zadane hodnote a zaroven byla linie rozdelena na stejne dlouhe segmenty.
@@ -159,7 +159,7 @@ def create_segments(line_fc, segmentation_size, output_fc):
     '''
     # priprava vystupni fc
     sr = arcpy.Describe(line_fc).spatialReference
-    arcpy.CreateFeatureclass_management(workspace, output_fc, 'POLYLINE', '', '', '', sr)
+    output_fc = arcpy.CreateFeatureclass_management(workspace, 'tmp_segments' , 'POLYLINE', '', '', '', sr)
     arcpy.AddField_management(output_fc, 'id_line', 'SHORT')
 
     s_cursor = arcpy.da.SearchCursor(line_fc, ['Shape@', 'Shape_Length', 'OBJECTID'])

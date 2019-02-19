@@ -31,8 +31,11 @@ arcpy.SelectLayerByAttribute_management('in_edges_lyr', 'NEW_SELECTION', lower_e
 lower_edges = arcpy.CopyFeatures_management('in_edges_lyr', 'tmp_lower_edges')
 
 
+
+
 # lower edge segmentation, creating new field "seg_id"
-output = my_utils.create_segments(lower_edges, segmentation_size, output_name)
+segments = my_utils.create_segments(lower_edges, segmentation_size)
+output = arcpy.CopyFeatures_management(segments, output_name)
 arcpy.AddField_management (output, 'seg_id', 'SHORT')
 arcpy.CalculateField_management(output, 'seg_id', '[OBJECTID]', 'VB','')
 
