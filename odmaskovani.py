@@ -3,32 +3,32 @@ import parameters
 import my_utils
 #import utils
 
-import decimal
+# import decimal
 start = time.time()
-
-#Check the Spatial extension
 arcpy.CheckOutExtension('Spatial')
-
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = '.\\utery.gdb'
+
+# nastaveni pracovni databaze
+work_dtb = parameters.work_dtb
+arcpy.env.workspace = '.\\{}.gdb'.format(work_dtb)
 workspace = arcpy.env.workspace
 
 # inputs
 valley = parameters.valley
 size_percent = 5
 minimum_wall_height = 0.2
-maximum_wall_height = 5 # muze byt fixni???
-left_buffer = 'left_buff'
-in_wall = 'stena'
-tvarove_cary = 'cary_mary_5m' # opravit nazev
-kontury = 'rocks_contours_500' # opravit nazev
+maximum_wall_height = 5 # muze byt fixni??? -- pozor, tenhle nazev uz tam mam
+left_buffer = parameters.left_LE_buffer_to_erase
+in_wall = parameters.in_wall
+contour_line = parameters.output_CL
+rock_contours = parameters.output_RC
 
 # outputs
-output_kuzel = 'tmp_kuzel_maska'
-mask_1 = 'maska_skaly'
-mask_2 = 'maska_ostatni'
-tc_final = 'tc_final_orez'
-# final_complet = 'final_drawing'
+mask_2 = 'mask'
+tc_final = 'tvarove_cary_orez_rc'
+
+
+
 
 ### ODMASKOVANI PUKLIN/UDOLNIC
 # priprava/vytvoreni vystupni vrstvy
@@ -53,8 +53,8 @@ for row in s_cursor:
     # nasledne jsou konkretni hodnoty prirazeny prostrednictvim indexu
     maximum = maximum_wall_height
     minimum = minimum_wall_height
-    addition = decimal.Decimal(maximum - minimum) / decimal.Decimal(segments_count - 1)#musim pracovat s desetinnym cislem
-    addition = round(addition, 6) #(nevim, kolik des.mist ma "double")
+    addition = float((maximum - minimum) / (segments_count - 1))#musim pracovat s desetinnym cislem
+    #addition = round(addition, 6) #(nevim, kolik des.mist ma "double")
     s = 1 # indexovani poradi segmentu
     addition_list = []
     addition_list.append(maximum)  # nacte maximum "k prvnimu prvku"
@@ -95,20 +95,20 @@ arcpy.Erase_analysis (simplify, left_buffer, 'tmp_simplify_erase')
 arcpy.MultipartToSinglepart_management ('tmp_simplify_erase', 'tmp_multipart')
 arcpy.MakeFeatureLayer_management('tmp_multipart', 'multipart_lyr')
 arcpy.SelectLayerByAttribute_management('multipart_lyr', 'NEW_SELECTION', ' "Shape_Area" > 50 ')
-arcpy.CopyFeatures_management('multipart_lyr', output_kuzel)
+mask_valley = arcpy.CopyFeatures_management('multipart_lyr', 'tmp_mask_valley')
 
 ### MASKA CELEK
-arcpy.Merge_management ([in_wall, output_kuzel], 'tmp_merge')
+arcpy.Merge_management ([in_wall, mask_valley], 'tmp_merge')
 # vrstva pro odmaskovani kresby skal
-arcpy.Dissolve_management ('tmp_merge', mask_1)
+mask_to_erase = arcpy.Dissolve_management ('tmp_merge', 'tmp_mask_to_erase')
 # vrstva pro odmaskovani okolni kresby
 mask_gap_value = 1.5
 mask_gap = '{} Meters'.format(mask_gap_value)
-arcpy.Buffer_analysis(mask_1, mask_2, mask_gap, 'FULL', 'ROUND', 'ALL', '', 'PLANAR')
+arcpy.Buffer_analysis(mask_to_erase, mask_2, mask_gap, 'FULL', 'ROUND', 'ALL', '', 'PLANAR')
 
 ### ODMASKOVANI CELEK
-arcpy.Intersect_analysis ([tvarove_cary, mask_1], tc_final)
-#arcpy.Merge_management ([tc_final, kontury], final_complet)
+arcpy.Intersect_analysis ([contour_line, mask_to_erase], tc_final)
+arcpy.Erase_analysis(tc_final, rock_contours, 'finito')
 
 # zaverecny uklid
 list = arcpy.ListFeatureClasses('tmp_*')

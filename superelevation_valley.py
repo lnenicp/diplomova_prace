@@ -4,27 +4,34 @@ import my_utils
 import time
 
 start = time.time()
-
-#Check the Spatial extension
 arcpy.CheckOutExtension('Spatial')
-
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = '.\\numeromis.gdb'
+
+# nastaveni pracovni databaze
+work_dtb = parameters.work_dtb
+arcpy.env.workspace = '.\\{}.gdb'.format(work_dtb)
 workspace = arcpy.env.workspace
 
-
-# inputs
+## NASTAVENI
+# vstupni vrstvy
 valley = parameters.valley
+
+# vstupni parametry
+map_scale = parameters.map_scale
 point_buffer_size = parameters.point_buffer_size
 segmentation_size_valley = parameters.segmentation_size_valley
+segmentation_size_valley = my_utils.calculate_real_size(map_scale, segmentation_size_valley)
 minimum_wall_height = parameters.minimum_wall_height
-output2 = parameters.output2
 
+# vystupni vrstvy
+output_V = parameters.output_V
+if arcpy.Exists (output_V):
+	arcpy.Delete_management (output_V)
 
 # prvni body udolnic - pruseciky udolnice a dolni hrany
 first_points = my_utils.create_first_point_on_line(valley)
 
-# vypocet maximalni hodnoty prevyseni pro puklinu (v miste dotyku dolni hrany)
+# vypocet maximalni hodnoty prevyseni pro udolnici (v miste dotyku dolni hrany)
 arcpy.AddField_management (first_points, 'max_superelev', 'DOUBLE')
 u_cursor = arcpy.da.UpdateCursor(first_points, ['max_superelev'])
 i = 1
@@ -38,9 +45,8 @@ for row in u_cursor:
     superelevation = my_utils.create_list_of_values(zone, 'superelevation')
     length = my_utils.create_list_of_values(zone, 'Shape_Length')
 
-    # vazeny prumer (hodnota prevyseni vzhledem k delce linie)
+    # vazeny prumer (hodnota prevyseni vzhledem k delce linie v urcenem okoli bodu)
     max_c = [length[j] * superelevation[j] for j in range(0,len(superelevation))]
-    # pro pripad chyby ve skriptu "superelevation_lower_edges.py"
     try:
         maximum = sum(max_c) / sum(length)
     except ZeroDivisionError:
@@ -50,14 +56,14 @@ for row in u_cursor:
     i = i + 1
 del u_cursor
 
-# seznam maximalnich hodnot prevyseni pro jednotlive linie puklin
+# seznam maximalnich hodnot prevyseni pro jednotlive linie udolnic
 valley_max_superelev = my_utils.create_list_of_values(first_points, 'max_superelev')
 
 # priprava/vytvoreni vystupni vrstvy
 sr = arcpy.Describe(valley).spatialReference
-arcpy.CreateFeatureclass_management(workspace, output2, 'POLYLINE', '', '', '', sr)
-arcpy.AddField_management (output2, 'superelevation', 'DOUBLE')
-arcpy.AddField_management (output2, 'id_line', 'SHORT')
+arcpy.CreateFeatureclass_management(workspace, output_V, 'POLYLINE', '', '', '', sr)
+arcpy.AddField_management (output_V, 'superelevation', 'DOUBLE')
+arcpy.AddField_management (output_V, 'id_line', 'SHORT')
 
 ## pro kazdou udolnici se provede segmentace a nasledne se urci/interpoluje hodnota prevyseni pro jednotlive segmenty
 # tyto udaje/hodnty se importuju do (vyse) vytvorene vystupni fc
@@ -76,7 +82,10 @@ for row in s_cursor:
     s_cur = arcpy.da.SearchCursor('tmp_one_valley',['Shape_Length'])
     for i in s_cur:
         lenght = i[0]
-        segments_count = int(round(lenght / segmentation_size_valley))
+        try:
+            segments_count = int(round(lenght / segmentation_size_valley))
+        except ZeroDivisionError:
+            segments_count = int(lenght)
     del s_cur
 
     ## vypocet prevyseni - tvorba listu pro jednotlive segmenty
@@ -96,7 +105,7 @@ for row in s_cursor:
     addition_list.append(minimum)  # nacte minimum "k poslednimu prvku"
 
     # naplneni vystupni vrstvy daty - vlozeni geometrie, id objektu a prevyseni
-    i_cur = arcpy.da.InsertCursor(output2, ['Shape@', 'OBJECTID', 'id_line', 'superelevation'])
+    i_cur = arcpy.da.InsertCursor(output_V, ['Shape@', 'OBJECTID', 'id_line', 'superelevation'])
     al = 0 # indexovani v additon_list
     for k in range(0,segments_count):
         segment = line.segmentAlongLine(k/float(segments_count), ((k+1)/float(segments_count)), True)
@@ -108,6 +117,7 @@ for row in s_cursor:
     vms = vms + 1
 del s_cursor
 
+# "zaverecny uklid"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)

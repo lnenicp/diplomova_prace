@@ -2,151 +2,26 @@ import arcpy
 import os
 import numpy
 
-#Check the Spatial extension
-arcpy.CheckOutExtension("Spatial")
+import parameters
 
+
+arcpy.CheckOutExtension("Spatial")
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = ".\\text.gdb"
+
+work_dtb = parameters.work_dtb
+arcpy.env.workspace = '.\\{}.gdb'.format(work_dtb)
 workspace = arcpy.env.workspace
 
-
-def create_points_along_line(in_feature_class, sampling):
+# tato funkce by mela nahradit funkci "calculate_contour_size"
+def calculate_real_size (map_scale, size_in_map):
     '''
-    Na jednolivych prvcich liniove vrstvy vytvori body v pozadovane vzdalenosti(na zaklade daneho atributu).
-    :param in_feature_class: liniova vrstva
-    :param sampling: nazev atributu, ktery obsahuje hodnoty vzorkovani (pozadovane vzdalenosti mezi body)
-    :param out_feature_class: bodova vrstva
-    :return: Bodovou vrstvu, kde se body nachazi na linii v pozadovane vzdalenosti.
-    '''
-    array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
-    points_list = list() # list pro zapisovani souradnic jednotlivych bodu
-    output = 'tmp_points_along_line'
-    output_path = os.path.join(workspace, 'tmp_fc' ) # muze vzniknout problem s cestou!!!
-    s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'Shape_Length', sampling, 'OBJECTID'])
-    for row in s_cursor:
-        shape = row[0]
-        lenght = row[1]
-        sampling = row[2]
-        sampling_add = row[2]
-        id = row[3]
-        array_points = shape.getPart()
-        line = arcpy.Polyline(array_points) # (+radek vys) "rozdeli linii na jednotlive body"
-        while sampling < lenght:
-            point = line.positionAlongLine(sampling) # zjisi souradnice bodu na prislusnem miste
-            points_list.append((id, (point.getPart().X, point.getPart().Y))) # zapise souradnice bodu do points_list
-            sampling += sampling_add
-        # prevede list se souradnicemi na geometrii
-        array = numpy.array([points_list], numpy.dtype([('id_line',numpy.int32),('XY', '<f8', 2)]))
-    sr = arcpy.Describe(in_feature_class).spatialReference
-    arcpy.da.NumPyArrayToFeatureClass(array, output_path, ['XY'], sr) # vytvoreni nove fc ze vzniklych bodu
-    # fce NumPyArrayToFeatureClass neumoznuje prepis jiz existujicich souboru, proto je tu klicka s kopirovanim a mazanim
-    arcpy.CopyFeatures_management('tmp_fc', output)
-    arcpy.Delete_management('tmp_fc')
-    del s_cursor
-    return output
-
-
-# calculate the length of the lower edge segment
-def calculate_sampling(feature_class, segmentation_size):
-    '''
-    Prepocita zadanou hodnotu velikosti segmentu na optimalni velikost segmentu. Nebo-li vypocita delku segmentu tak,
-    aby se co nejvice blizila zadane hodnote a zaroven byla linie rozdelena na stejne dlouhe segmenty.
-    :param feature_class: liniova vrstva
-    :param segmentation_size: pozadovana velikost segmentu (v metrech)???
-    :return: vtupni liniovou vrstvu s novym atributem 'sampling'
-    '''
-    arcpy.AddField_management (feature_class, 'sampling', "DOUBLE")
-    u_cursor = arcpy.da.UpdateCursor(feature_class, ['Shape_Length','sampling'])
-    for row in u_cursor:
-        lenght = row[0]
-        segment_count = round(lenght / segmentation_size) # musim zaokrouhlit, abych mohla "rozpocitat" skutecnou velikost
-        try:
-            segment = lenght / segment_count
-        # pokud je linie kratsi nez pozadovany segment (nebude se delit)
-        except ZeroDivisionError:
-            segment = lenght
-        row[1]= segment
-        u_cursor.updateRow(row)
-    del u_cursor
-    return feature_class
-
-
-def create_sql_query(list_of_lists):
-    '''
-    Z listu jednotlivych ID predpripravi SQL dotazy, ktere vyberou vsechny ID z daneho seznamu.
-    Funguje i pro list listu - tedy vytvori list SQL dotazu.
-    :param groups: list of lists/ pole poli
-    :return: list/pole SQL dotazu
-    '''
-    sql_list = []
-    for list in list_of_lists:
-        sql_i = []
-        for j in list:
-            j_str = str(j)
-            if len(sql_i)==0:
-                sql_i = '"OBJECTID" = {}'.format(j_str)
-                # sql_i = '"seg_id" = {}'.format(j_str)
-            else:
-                i = str(sql_i)
-                sql_i = i + ' OR "OBJECTID" = {}'.format(j_str)
-                #sql_i = '"seg_id" = {}'.format(j_str)
-        sql_list.append(sql_i)
-        sql_i = []
-    return sql_list
-
-
-def create_first_point_on_line(in_feature_class):
-    '''
-    Na jednolivych prvcich liniove vrstvy vytvori body na jejich pocatku.
-    :param in_feature_class: liniova vrstva
-    :return: Bodovou vrstvu, kde jsou body umiteny na pocatku linii vstupni vrstvy
-    '''
-    array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
-    points_list = list() # list pro zapisovani souradnic jednotlivych bodu
-    output = 'tmp_first_points'
-    output_path = os.path.join(workspace, 'tmp_fc') # muze vzniknout problem s cestou!!!
-    s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'OBJECTID'])
-    for row in s_cursor:
-        shape = row[0]
-        id = row[1]
-        array_points = shape.getPart()
-        line = arcpy.Polyline(array_points) # (+radek vys) "rozdeli linii na jednotlive body"
-        point = line.positionAlongLine(0) # zjisi souradnice pocatecniho bodu
-        points_list.append((id, (point.getPart().X, point.getPart().Y))) # zapise souradnice bodu do points_list
-        # prevede list se souradnicemi na geometrii
-        array = numpy.array([points_list], numpy.dtype([('id_line',numpy.int32),('XY', '<f8', 2)]))
-    sr = arcpy.Describe(in_feature_class).spatialReference
-    arcpy.da.NumPyArrayToFeatureClass(array, output_path, ['XY'], sr) # vytvoreni nove fc ze vzniklych bodu
-    # fce NumPyArrayToFeatureClass neumoznuje prepis jiz existujicich souboru, proto je tu klicka s kopirovanim a mazanim
-    arcpy.CopyFeatures_management('tmp_fc', output)
-    arcpy.Delete_management('tmp_fc')
-    del s_cursor
-    return output
-
-def create_list_of_values(in_feature_class, attribute):
-    '''
-    Pro zvolenou vtupni fc vypise hodnoty pozadovaneho atributu
-    :param in_feature_class: fc libovolne geomtrie
-    :param attribute: pozadovany atribut
-    :return: list hodnot zadaneho atributu
-    '''
-    list = []
-    s_cursor = arcpy.da.SearchCursor(in_feature_class, [attribute])
-    for row in s_cursor:
-        list.append(row[0])
-    del s_cursor
-    return list
-
-
-def calculate_contour_size (map_scale, contour_size_map):
-    '''
-    Prepocita pozadovana sirku kontury z mm v mape na m ve skutecnoti.
+    Prepocita pozadovana velikost z mm v mape na m ve skutecnoti.
     :param map_scale: meritkove cislo mapy
-    :param contour_size_map: pozadovana tloustka kontury v mape (mm)
-    :return: hodnotu pro vytvoreni jednostranneho bufferu
+    :param size_in_map: pozadovana velikost v mape (mm)
+    :return: velikost/rozmer prvku ve skutecnosti
     '''
-    contour_size_real = contour_size_map  * map_scale/1000
-    return contour_size_real
+    size_in_real = size_in_map  * map_scale/1000
+    return size_in_real
 
 
 def create_segments(line_fc, segmentation_size):
@@ -185,7 +60,77 @@ def create_segments(line_fc, segmentation_size):
     del s_cursor
     return output_fc
 
-def classify_contour_size(line_superelev, map_scale, buffer_type):
+
+def create_sql_query(list_of_lists):
+    '''
+    Z listu jednotlivych ID predpripravi SQL dotazy, ktere vyberou vsechny ID z daneho seznamu.
+    Funguje i pro list listu - tedy vytvori list SQL dotazu.
+    :param groups: list of lists/ pole poli
+    :return: list/pole SQL dotazu
+    '''
+    sql_list = []
+    for list in list_of_lists:
+        sql_i = []
+        for j in list:
+            j_str = str(j)
+            if len(sql_i)==0:
+                sql_i = '"OBJECTID" = {}'.format(j_str)
+            else:
+                i = str(sql_i)
+                sql_i = i + ' OR "OBJECTID" = {}'.format(j_str)
+        sql_list.append(sql_i)
+        sql_i = []
+    return sql_list
+
+
+def create_first_point_on_line(in_feature_class):
+    '''
+    Na jednolivych prvcich liniove vrstvy vytvori body na jejich pocatku.
+    :param in_feature_class: liniova vrstva
+    :return: Bodovou vrstvu, kde jsou body umiteny na pocatku linii vstupni vrstvy
+    '''
+    array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
+    points_list = list() # list pro zapisovani souradnic jednotlivych bodu
+    output = 'tmp_first_points'
+    output_path = os.path.join(workspace, 'tmp_fc') # muze vzniknout problem s cestou!!!
+    # zkouska, jestli to pomuze
+    if arcpy.Exists('tmp_fc'):
+        arcpy.Delete_management('tmp_fc')
+    s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'OBJECTID'])
+    for row in s_cursor:
+        shape = row[0]
+        id = row[1]
+        array_points = shape.getPart()
+        line = arcpy.Polyline(array_points) # (+radek vys) "rozdeli linii na jednotlive body"
+        point = line.positionAlongLine(0) # zjisi souradnice pocatecniho bodu
+        points_list.append((id, (point.getPart().X, point.getPart().Y))) # zapise souradnice bodu do points_list
+        # prevede list se souradnicemi na geometrii
+        array = numpy.array([points_list], numpy.dtype([('id_line',numpy.int32),('XY', '<f8', 2)]))
+    sr = arcpy.Describe(in_feature_class).spatialReference
+    arcpy.da.NumPyArrayToFeatureClass(array, output_path, ['XY'], sr) # vytvoreni nove fc ze vzniklych bodu
+    # fce NumPyArrayToFeatureClass neumoznuje prepis jiz existujicich souboru, proto je tu klicka s kopirovanim a mazanim
+    arcpy.CopyFeatures_management('tmp_fc', output)
+    arcpy.Delete_management('tmp_fc')
+    del s_cursor
+    return output
+
+
+def create_list_of_values(in_feature_class, attribute):
+    '''
+    Pro zvolenou vtupni fc vypise hodnoty pozadovaneho atributu
+    :param in_feature_class: fc libovolne geomtrie
+    :param attribute: pozadovany atribut
+    :return: list hodnot zadaneho atributu
+    '''
+    list = []
+    s_cursor = arcpy.da.SearchCursor(in_feature_class, [attribute])
+    for row in s_cursor:
+        list.append(row[0])
+    del s_cursor
+    return list
+
+
+def classify_contour_size(line_superelev, map_scale, contour_size_1, contour_size_2, contour_size_3, buffer_type):
     '''
     #Priradi tloustku kontury ke kazdemu segmentu dle hodnoty prevyseni a pozadovanemu typu bufferu.
     #:param line_superelev: line fc se segmenty s urcenym prevysenim
@@ -202,14 +147,15 @@ def classify_contour_size(line_superelev, map_scale, buffer_type):
     for row in u_cur:
         superelevation = row[0]
         if superelevation <= 10:
-            value = (calculate_contour_size(map_scale, 0.25))/bt
+            value = (calculate_real_size(map_scale, contour_size_1))/bt
         if 10 < superelevation <= 25:
-            value = (calculate_contour_size(map_scale, 0.4)) / bt
+            value = (calculate_real_size(map_scale, contour_size_2)) / bt
         if superelevation > 25:
-            value = (calculate_contour_size(map_scale, 0.6)) / bt
+            value = (calculate_real_size(map_scale, contour_size_3)) / bt
         row[1] = value
         u_cur.updateRow(row)
     return line_superelev
+
 
 def select_end_segments(line_superelev, output_fc):
     # vytvoreni prazdne fc (odpovidajicich atributu)
@@ -232,4 +178,91 @@ def select_end_segments(line_superelev, output_fc):
         arcpy.Append_management(seg, output_fc)
         i = i + 1
     return output_fc
+
+
+
+# ------------------------------------------------------------------
+
+"""
+def create_points_along_line(in_feature_class, sampling):
+    '''
+    Na jednolivych prvcich liniove vrstvy vytvori body v pozadovane vzdalenosti(na zaklade daneho atributu).
+    :param in_feature_class: liniova vrstva
+    :param sampling: nazev atributu, ktery obsahuje hodnoty vzorkovani (pozadovane vzdalenosti mezi body)
+    :param out_feature_class: bodova vrstva
+    :return: Bodovou vrstvu, kde se body nachazi na linii v pozadovane vzdalenosti.
+    '''
+    array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
+    points_list = list() # list pro zapisovani souradnic jednotlivych bodu
+    output = 'tmp_points_along_line'
+    output_path = os.path.join(workspace, 'tmp_fc' ) # muze vzniknout problem s cestou!!!
+    s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'Shape_Length', sampling, 'OBJECTID'])
+    for row in s_cursor:
+        shape = row[0]
+        lenght = row[1]
+        sampling = row[2]
+        sampling_add = row[2]
+        id = row[3]
+        array_points = shape.getPart()
+        line = arcpy.Polyline(array_points) # (+radek vys) "rozdeli linii na jednotlive body"
+        while sampling < lenght:
+            point = line.positionAlongLine(sampling) # zjisi souradnice bodu na prislusnem miste
+            points_list.append((id, (point.getPart().X, point.getPart().Y))) # zapise souradnice bodu do points_list
+            sampling += sampling_add
+        # prevede list se souradnicemi na geometrii
+        array = numpy.array([points_list], numpy.dtype([('id_line',numpy.int32),('XY', '<f8', 2)]))
+    sr = arcpy.Describe(in_feature_class).spatialReference
+    arcpy.da.NumPyArrayToFeatureClass(array, output_path, ['XY'], sr) # vytvoreni nove fc ze vzniklych bodu
+    # fce NumPyArrayToFeatureClass neumoznuje prepis jiz existujicich souboru, proto je tu klicka s kopirovanim a mazanim
+    arcpy.CopyFeatures_management('tmp_fc', output)
+    arcpy.Delete_management('tmp_fc')
+    del s_cursor
+    return output
+"""
+
+"""
+# calculate the length of the lower edge segment
+def calculate_sampling(feature_class, segmentation_size):
+    '''
+    Prepocita zadanou hodnotu velikosti segmentu na optimalni velikost segmentu. Nebo-li vypocita delku segmentu tak,
+    aby se co nejvice blizila zadane hodnote a zaroven byla linie rozdelena na stejne dlouhe segmenty.
+    :param feature_class: liniova vrstva
+    :param segmentation_size: pozadovana velikost segmentu (v metrech)???
+    :return: vtupni liniovou vrstvu s novym atributem 'sampling'
+    '''
+    arcpy.AddField_management (feature_class, 'sampling', "DOUBLE")
+    u_cursor = arcpy.da.UpdateCursor(feature_class, ['Shape_Length','sampling'])
+    for row in u_cursor:
+        lenght = row[0]
+        segment_count = round(lenght / segmentation_size) # musim zaokrouhlit, abych mohla "rozpocitat" skutecnou velikost
+        try:
+            segment = lenght / segment_count
+        # pokud je linie kratsi nez pozadovany segment (nebude se delit)
+        except ZeroDivisionError:
+            segment = lenght
+        row[1]= segment
+        u_cursor.updateRow(row)
+    del u_cursor
+    return feature_class
+"""
+
+
+'''
+# nahradit fci viz vyse
+def calculate_contour_size (map_scale, contour_size_map):
+    
+    Prepocita pozadovana sirku kontury z mm v mape na m ve skutecnoti.
+    :param map_scale: meritkove cislo mapy
+    :param contour_size_map: pozadovana tloustka kontury v mape (mm)
+    :return: hodnotu pro vytvoreni jednostranneho bufferu
+    
+    contour_size_real = contour_size_map  * map_scale/1000
+    return contour_size_real
+'''
+
+
+
+
+
+
 
