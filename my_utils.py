@@ -6,7 +6,7 @@ import numpy
 arcpy.CheckOutExtension("Spatial")
 
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = ".\\PB.gdb"
+arcpy.env.workspace = ".\\text.gdb"
 workspace = arcpy.env.workspace
 
 
@@ -104,7 +104,7 @@ def create_first_point_on_line(in_feature_class):
     array = arcpy.Array() # pripraveni "listu pro nacteni geometrie"
     points_list = list() # list pro zapisovani souradnic jednotlivych bodu
     output = 'tmp_first_points'
-    output_path = os.path.join(workspace, 'tmp_fc' ) # muze vzniknout problem s cestou!!!
+    output_path = os.path.join(workspace, 'tmp_fc') # muze vzniknout problem s cestou!!!
     s_cursor = arcpy.da.SearchCursor(in_feature_class, ['Shape@', 'OBJECTID'])
     for row in s_cursor:
         shape = row[0]

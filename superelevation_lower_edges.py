@@ -9,7 +9,7 @@ start = time.time()
 arcpy.CheckOutExtension('Spatial')
 
 arcpy.env.overwriteOutput = 1
-arcpy.env.workspace = '.\\PB.gdb'
+arcpy.env.workspace = '.\\text.gdb'
 workspace = arcpy.env.workspace
 
 # inputs
@@ -90,13 +90,13 @@ arcpy.JoinField_management (output, 'OBJECTID', 'tmp_superelevation', 'tmp_relev
                             'tmp_zonal_stat_table_RANGE')
 arcpy.AlterField_management (output, 'tmp_zonal_stat_table_RANGE', 'superelevation','superelevation' )
 
-
+'''
 # "final cleaning"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
 
 arcpy.Delete_management('tmp_zonal_stat_table')
-
+'''
 end = time.time()
 print 'time', end-start

@@ -3,7 +3,7 @@ in_edges = 'hrana' # line fc of inputs edges
 lower_edge_description = "typ_hrana='D'" # name and value of attribute with lower edges in in_edges
 in_wall = 'stena' # polygon fc of wall
 in_dmr = 'dmt'
-output_name = 'superelevation_lower_edges_z' # line fc output
+output_name = 'superelevation_lower_edges' # line fc output
 segmentation_size = 10 # [m]
 buffer_zone = 20 # size of buffer for calculating superelevation [m]
 distance_polygons = 2 # minimum distance between polygons by creating groups/calculating superelevation [m]
