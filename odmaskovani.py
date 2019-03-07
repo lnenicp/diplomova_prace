@@ -25,7 +25,7 @@ rock_contours = parameters.output_RC
 
 # outputs
 mask_2 = 'mask'
-tc_final = 'tvarove_cary_orez_rc'
+tc_final = 'tmp_tvarove_cary_orez_rc'
 
 
 
@@ -110,11 +110,12 @@ arcpy.Buffer_analysis(mask_to_erase, mask_2, mask_gap, 'FULL', 'ROUND', 'ALL', '
 arcpy.Intersect_analysis ([contour_line, mask_to_erase], tc_final)
 arcpy.Erase_analysis(tc_final, rock_contours, 'finito')
 
+'''
 # zaverecny uklid
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-
+'''
 end = time.time()
 
 print 'time', end-start

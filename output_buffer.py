@@ -77,22 +77,23 @@ arcpy.Buffer_analysis(result, 'tmp_add_buff', buffer_size_smooth_positive, 'FULL
 arcpy.Buffer_analysis('tmp_add_buff', output_RC, buffer_size_smooth_negative, 'FULL', 'ROUND', 'NONE', '', 'PLANAR')
 
 ### vytvoreni pomocnych vstupnich vrstev pro kresbu tvarovych car
+'''
 # pomocna vrstva - kontury dolnich hran
 merge_LE = arcpy.Merge_management ([end_s_buf_lower_edges, in_s_buf_lower_edges], 'tmp_merge_LE')
 arcpy.Dissolve_management (merge_LE, 'tmp_contours_LE', 'id_line')
 contours_lower_edges = arcpy.Erase_analysis ('tmp_contours_LE', left_buffer, contours_LE)
-
+'''
 # pomocna vrstva - kontury udolnic
 merge_V = arcpy.Merge_management ([end_s_buf_valley, in_s_buf_valley ], 'tmp_merge_V')
 arcpy.Dissolve_management (merge_V, 'tmp_contours_V', 'id_line')
 contours_valley = arcpy.Erase_analysis ('tmp_contours_V', left_buffer, contours_V)
 
-"""
+
 # "zaverecny_uklid"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-"""
+
 
 end = time.time()
 print 'time', end-start

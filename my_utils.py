@@ -147,11 +147,11 @@ def classify_contour_size(line_superelev, map_scale, contour_size_1, contour_siz
     for row in u_cur:
         superelevation = row[0]
         if superelevation <= 10:
-            value = (calculate_real_size(map_scale, contour_size_1))/bt
+            value = float(calculate_real_size(map_scale, contour_size_1))/ bt
         if 10 < superelevation <= 25:
-            value = (calculate_real_size(map_scale, contour_size_2)) / bt
+            value = float(calculate_real_size(map_scale, contour_size_2)) / bt
         if superelevation > 25:
-            value = (calculate_real_size(map_scale, contour_size_3)) / bt
+            value = float(calculate_real_size(map_scale, contour_size_3)) / bt
         row[1] = value
         u_cur.updateRow(row)
     return line_superelev

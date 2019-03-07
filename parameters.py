@@ -1,5 +1,7 @@
 # nastaveni pracovni databaze
-work_dtb = 'ctvrtek'
+# meritko 1000
+work_dtb = 'minifinale'
+
 
 '''
 Parametry skriptu: superelevation_lower_edges.py
@@ -20,7 +22,7 @@ in_dmr = 'dmt'
 lower_edge_description = "typ_hrana='D'"
 
 # meritko mapy
-map_scale = 5000
+map_scale = 1000
 
 
 # velikost segmentu, na ktere bude rozdelena vrstva "in_edges"
@@ -82,9 +84,9 @@ Vystupem je polygonova vrstva zakladnich kontur.
 ## DALSI VSTUPNI PARAMETRY
 # pozadovane sirky kontur
 # (velikost v [mm] v mape)
-contour_size_1 = 0.25
-contour_size_2 = 0.4
-contour_size_3 = 0.6
+contour_size_1 = 1      #0.25
+contour_size_2 = 1.5    #0.4
+contour_size_3 = 2      #0.6
 
 # hodnota pro shlazeni vystupniho polygonu
 # (velikost v [m] ve skutecnosti)
@@ -111,7 +113,8 @@ Vystupem je liniova vrstva tvarovych car.
 '''
 ## DALSI VSTUPNI PARAMETRY
 # zakladni interval mezi tvarovymi carami
-gap_value = 0.5 # v metrech
+# gap_value = 0.5 # v metrech
+gap_value = 1.2#0.1 # v mm -- musi byt vetsi nez 0.1 nebo musim upravit parametry bufferu uvnitr scriptu
 
 # cheek_value = 0.7 # v metrech ...lepsi vypocitat jako pridavek k gap_value ... min o 0,2 vetsi, (pak se dela buffer +- 0,1 - tak aby se to neodmazalo)
 # addition_value = 0.5 #gap_value ... taky dat jenom jako vypocet ... jako prideavek = parameters.gap_value
@@ -121,8 +124,13 @@ multiple = 1.2
 
 # maximalni vyska/sirka steny
 # (velikost v [m] ve skutecnosti)
-maximal_width_of_wall = 4 # v metrech - duplicitne jeste jendou niz
+maximal_width_of_wall = 8 # v metrech - duplicitne jeste jendou niz
+
+# minimalni a maximalni tloustka linie tvarovych car
+# (velikost v [mm] v mape)
+min_line_width = 0.12
+max_line_width = 0.5
 
 ## VYSTUPNI VRSTVY
 output_CL = 'contour_line_{}'.format(map_scale)
-buffers_CL = 'buffers_CL'
+#buffers_CL = 'buffers_CL' #--- asi muzu smazat
