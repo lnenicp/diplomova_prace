@@ -17,7 +17,7 @@ workspace = arcpy.env.workspace
 cont_line = 'finito' #'contour_line_5000'
 basic_line = 'basic_line' # ve scriptu TC neni udelana jako promenna - dodelat
 map_scale = parameters.map_scale
-erase_size = 2.5#0.04 # parameters.erase_size # [mm], ted odpovida 0,2 [m]
+erase_size = 0.04 # parameters.erase_size # [mm], ted odpovida 0,2 [m]
 erase_size = my_utils.calculate_real_size(map_scale, erase_size)
 
 ## udelat z basic line single part -- asi vyreseno

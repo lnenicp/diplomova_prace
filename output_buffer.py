@@ -88,12 +88,12 @@ merge_V = arcpy.Merge_management ([end_s_buf_valley, in_s_buf_valley ], 'tmp_mer
 arcpy.Dissolve_management (merge_V, 'tmp_contours_V', 'id_line')
 contours_valley = arcpy.Erase_analysis ('tmp_contours_V', left_buffer, contours_V)
 
-
+'''
 # "zaverecny_uklid"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-
+'''
 
 end = time.time()
 print 'time', end-start

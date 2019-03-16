@@ -36,7 +36,7 @@ max_line_width = my_utils.calculate_real_size(map_scale, max_line_width)
 # vystupni vrstvy
 output_CL = parameters.output_CL
 #buffers_CL = parameters.buffers_CL
-
+'''
 ## vytvoreni zakladni linie, podle ktere se budou kreslit tvarove cary
 # buff_size_LE = '3,4 Meters' # promenlive podle meritka!!!
 buff_size_LE_value = 0.3 + my_utils.calculate_real_size(map_scale, contours_size_3)
@@ -50,8 +50,9 @@ buff_LE_V_merge = arcpy.Merge_management ([buff_LE, buff_V], 'tmp_buff_LE_V_merg
 buff_LE_V_merge_diss = arcpy.Dissolve_management (buff_LE_V_merge, 'tmp_buff_LE_V_merge_diss')
 buff_LE_V_merge_diss_lyr = arcpy.MakeFeatureLayer_management (buff_LE_V_merge_diss, 'tmp_buff_LE_V_merge_diss_lyr')
 buff_LE_V_merge_diss_line = arcpy.PolygonToLine_management (buff_LE_V_merge_diss_lyr, 'tmp_buff_LE_V_merge_diss_line')
-
+'''
 buff_size_cca = '0.1 Meters'
+'''
 erase_mask = arcpy.Buffer_analysis(buff_LE_V_merge_diss_line, 'tmp_erase_mask', buff_size_cca, 'FULL', 'ROUND', 'ALL', '', 'PLANAR')
 rocks_contours_lyr = arcpy.MakeFeatureLayer_management (rocks_contours, 'tmp_rocks_contours_lyr')
 rocks_contours_line = arcpy.PolygonToLine_management (rocks_contours_lyr, 'tmp_rocks_contours_line')
@@ -90,7 +91,7 @@ for row in u_cursor:
     row[1]= id
     u_cursor.updateRow(row)
 del u_cursor
-
+'''
 
 ## VYTVORENI VZOROVE VRSTVY tvarovych car
 gap = "{} Meters".format(gap_value)
@@ -113,10 +114,10 @@ arcpy.AddField_management(tvar_cary, 'id_order', 'SHORT')
 ## VYTVORENI TC A BUFFERU
 basic_lines_list = my_utils.create_list_of_values(basic_line, 'OBJECTID')
 # print(basic_lines_list)
-#basic_lines_list_select = basic_lines_list[1:4]
+# basic_lines_list_select = basic_lines_list[1:2]
 
 
-for id in basic_lines_list: #_select:# smazat
+for id in basic_lines_list:#_select:# smazat
     print('id', id)
     whereID = '"OBJECTID" = {}'.format(id) #(basic_lines_list[id])
     one_bl = arcpy.MakeFeatureLayer_management(basic_line, 'one_bl_lyr', whereID)
@@ -203,11 +204,13 @@ for row in u_cur:
     u_cur.updateRow(row)
 del u_cur
 
+
+'''
 # "final cleaning"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-
+'''
 
 end = time.time()
 print 'time', end-start

@@ -1,6 +1,6 @@
 # nastaveni pracovni databaze
-# meritko 1000
-work_dtb = 'minifinale'
+work_dtb = 'obrazky'
+# work_dtb = 'male'
 
 
 '''
