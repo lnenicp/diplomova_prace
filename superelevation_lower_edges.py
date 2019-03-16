@@ -92,13 +92,13 @@ arcpy.JoinField_management (output, 'OBJECTID', 'tmp_superelevation', 'tmp_relev
                             'tmp_zonal_stat_table_RANGE')
 arcpy.AlterField_management (output, 'tmp_zonal_stat_table_RANGE', 'superelevation','superelevation' )
 
-'''
+
 # "zaverecny uklid"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
 
 arcpy.Delete_management('tmp_zonal_stat_table')
-'''
+
 end = time.time()
 print 'time', end-start

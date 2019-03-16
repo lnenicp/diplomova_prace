@@ -132,7 +132,7 @@ def create_list_of_values(in_feature_class, attribute):
 
 def classify_contour_size(line_superelev, map_scale, contour_size_1, contour_size_2, contour_size_3, buffer_type):
     '''
-    #Priradi tloustku kontury ke kazdemu segmentu dle hodnoty prevyseni a pozadovanemu typu bufferu.
+    Priradi tloustku kontury ke kazdemu segmentu dle hodnoty prevyseni a pozadovanemu typu bufferu.
     #:param line_superelev: line fc se segmenty s urcenym prevysenim
     #:param map_scale: meritkove cislo mapy
     #:param buffer_type: zadat honotu 'ROUND' pro segmenty udolnic a 'RIGHT' pro segmenty dolnich hran
@@ -158,6 +158,12 @@ def classify_contour_size(line_superelev, map_scale, contour_size_1, contour_siz
 
 
 def select_end_segments(line_superelev, output_fc):
+    '''
+    Vybere pocatecni a koncovy segment linie
+    :param line_superelev: liniova vstupni vrstva (skladajici se ze segmentu)
+    :param output_fc: nazev vystupni vrstvy
+    :return: output_fc
+    '''
     # vytvoreni prazdne fc (odpovidajicich atributu)
     arcpy.CopyFeatures_management(line_superelev, output_fc)
     arcpy.DeleteRows_management (output_fc)
@@ -180,6 +186,55 @@ def select_end_segments(line_superelev, output_fc):
     return output_fc
 
 
+def calculate_contour_line_size(countour_line_fc, id_order_attribute, count_of_contour_line, min_line_width,
+                                max_line_width):
+    '''
+    Priradi tloustku linii (tvarovym caram) na zaklade toho, v jakem poradi byla vytvorena. Tloustka prislusne linie je
+    vypocitana linearni interpolaci mezi zadanou minimalni a maximalni hodnotou tloustky linie.
+    :param countour_line_fc: liniova vrstva tvarovych car
+    :param id_order_attribute: nazev atributu, ktery nese indormaci o poradi, v kterem byla tvarova cara vytvorena
+    :param count_of_contour_line: pocet tvarovych car (od jedne kontury/zakladni linie)
+    :param min_line_width: maximalni pozadovana tloustka linie kontury
+    :param max_line_width: minimalni pozadovana tloustka linie kontury
+    :return: vstupni vrstvu tvarovych car s novymm atributem "cl_size"
+    '''
+    # list "poctu/poradi" tvarovych car
+    order_list = []
+    for i in range(1, count_of_contour_line + 1):
+        order_list.append(i)
+
+    # list hodnot tloustek jednotlivych linii
+    add = (float(max_line_width) - float(min_line_width)) / float(count_of_contour_line - 1)
+    size_list = []
+    size_list.append(min_line_width)
+    s = 1
+    for j in range(1, (count_of_contour_line - 1)):
+        value = min_line_width + s * add
+        size_list.append(value)
+        s = s + 1
+    size_list.append(max_line_width)
+    # seradi hodnooty v listu obracene (od nejvetsiho k nejmensimu)
+    size_list = size_list[::-1]
+
+    # list listu [[poradi, tloustka], [], ...]
+    complet_list = []
+    for i in range(0, count_of_contour_line):
+        item = []
+        item.append(order_list[i])
+        item.append(size_list[i])
+        complet_list.append(item)
+
+    # prirazeni tloustky linie tvarove cary
+    arcpy.AddField_management(countour_line_fc, 'cl_size', 'DOUBLE')
+    u_cur = arcpy.da.UpdateCursor(countour_line_fc,
+                                  [id_order_attribute, 'cl_size'])  # '"{}"'.format(id_order_attribute)
+    for row in u_cur:
+        order = row[0]
+        row[1] = complet_list[order - 1][1]
+        u_cur.updateRow(row)
+    del u_cur
+
+    return countour_line_fc
 
 # ------------------------------------------------------------------
 

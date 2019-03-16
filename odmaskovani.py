@@ -15,19 +15,19 @@ workspace = arcpy.env.workspace
 
 # inputs
 valley = parameters.valley
-size_percent = 5
-minimum_wall_height = 0.2
-maximum_wall_height = 5 # muze byt fixni??? -- pozor, tenhle nazev uz tam mam
 left_buffer = parameters.left_LE_buffer_to_erase
 in_wall = parameters.in_wall
 contour_line = parameters.output_CL
 rock_contours = parameters.output_RC
 
+# parameters
+size_percent = parameters.size_percent
+minimum_valley_wall_height = parameters.minimum_valley_wall_height
+maximum_valley_wall_height = parameters.maximum_valley_wall_height
+
 # outputs
-mask_2 = 'mask'
-tc_final = 'tmp_tvarove_cary_orez_rc'
-
-
+mask = parameters.mask
+cl_output_01 = parameters.cl_output_01
 
 
 ### ODMASKOVANI PUKLIN/UDOLNIC
@@ -51,8 +51,8 @@ for row in s_cursor:
 
     ## vypocet sirky/tloustky bufferu - tvorba listu pro jednotlive segmenty
     # nasledne jsou konkretni hodnoty prirazeny prostrednictvim indexu
-    maximum = maximum_wall_height
-    minimum = minimum_wall_height
+    maximum = maximum_valley_wall_height
+    minimum = minimum_valley_wall_height
     addition = float((maximum - minimum) / (segments_count - 1))#musim pracovat s desetinnym cislem
     #addition = round(addition, 6) #(nevim, kolik des.mist ma "double")
     s = 1 # indexovani poradi segmentu
@@ -104,18 +104,18 @@ mask_to_erase = arcpy.Dissolve_management ('tmp_merge', 'tmp_mask_to_erase')
 # vrstva pro odmaskovani okolni kresby
 mask_gap_value = 1.5
 mask_gap = '{} Meters'.format(mask_gap_value)
-arcpy.Buffer_analysis(mask_to_erase, mask_2, mask_gap, 'FULL', 'ROUND', 'ALL', '', 'PLANAR')
+arcpy.Buffer_analysis(mask_to_erase, mask, mask_gap, 'FULL', 'ROUND', 'ALL', '', 'PLANAR')
 
 ### ODMASKOVANI CELEK
-arcpy.Intersect_analysis ([contour_line, mask_to_erase], tc_final)
-arcpy.Erase_analysis(tc_final, rock_contours, 'finito')
+tc_intersect = arcpy.Intersect_analysis ([contour_line, mask_to_erase], 'tmp_tc_intersect')
+arcpy.Erase_analysis(tc_intersect, rock_contours, cl_output_01)
 
-'''
+
 # zaverecny uklid
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-'''
+
 end = time.time()
 
 print 'time', end-start

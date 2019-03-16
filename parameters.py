@@ -1,6 +1,6 @@
 # nastaveni pracovni databaze
-work_dtb = 'obrazky'
-# work_dtb = 'male'
+work_dtb = '_testicek'
+
 
 
 '''
@@ -131,6 +131,58 @@ maximal_width_of_wall = 8 # v metrech - duplicitne jeste jendou niz
 min_line_width = 0.12
 max_line_width = 0.5
 
+# velikost bufferu okolo kontur udolnic (pro vytvoreni zakladni linie)
+# (velikost v [m] ve skutecnosti)
+buff_size_V_value = 0.3
+
+# velikost bufferu, ktery se vytvari pro odmazani lini vzniklych "nepresnostmi"
+    # slouzi pro odmazavani dvou bufferu prevedenych na linie,
+    # kolem linie, kterou je odmazavno, je vytvoren tento buffer
+# (velikost v [m] ve skutecnosti)
+buff_size_cca_value = 0.1 #'0.1 Meters'
+
 ## VYSTUPNI VRSTVY
 output_CL = 'contour_line_{}'.format(map_scale)
-#buffers_CL = 'buffers_CL' #--- asi muzu smazat
+
+# nazev pomocne vystupni vrstvy zakladnich linii
+basic_line_name = 'basic_line'
+
+'''
+Dalsi parametry pro skript: odmaskovani.py
+Vystupem je liniova vrstva "oriznutych" tvarovych car.
+'''
+# velikost (v %), na kterou se maji rozdelit udolnice pri tvorbe umele steny (pro odmaskovani)
+size_percent = 5
+
+# minimalni a maximalni vyska umele steny udolnice
+# (velikost v [m] ve skutecnosti)
+minimum_valley_wall_height = 0.2
+maximum_valley_wall_height = 5
+
+# nazev vystupni vrstvy masky pro odmaskovani okolni mapove kresby
+mask = 'mask'
+
+# nazev vystupni vrstvy oriznutych tvarovych car
+cl_output_01 = 'contour_line_relevant'
+
+
+'''
+Dalsi parametry pro skript: tc_konflikt.py
+Vystupem je liniova vrstva "oriznutych" tvarovych car bez prekryvu/pruseciku.
+'''
+
+# velikost, o kterou bude zkracen "sporny segment"
+# (velikost v [mm] v mape)
+    # pozor, aby hodnota nebyla vetsi, nez sama velikost/delka segmentu
+erase_size_value = 0.04 #ted odpovida 0,2 [m]
+
+# nazev vystupni vrstvy tvarovych car (konecna podoba linii)
+cl_output = 'contour_lines_line'
+
+'''
+Dalsi parametry pro skript: tc_output_buffer.py
+Vystupem je liniova vrstva "oriznutych" tvarovych car bez prekryvu/pruseciku.
+'''
+# nazev vystupni vrstvy
+    # linie tvarovych car prevedene na polygony dle prirazene tloustky
+cl_polygon = 'contour_lines_polygon'

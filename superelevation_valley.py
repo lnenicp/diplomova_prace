@@ -117,12 +117,12 @@ for row in s_cursor:
     vms = vms + 1
 del s_cursor
 
-'''
+
 # "zaverecny uklid"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-'''
+
 end = time.time()
 
 print 'time', end-start

@@ -14,10 +14,13 @@ arcpy.env.workspace = '.\\{}.gdb'.format(work_dtb)
 workspace = arcpy.env.workspace
 
 # inputs
-final_line = 'cont_line_final_line'
+final_line = parameters.cl_output
+
+# output
+cl_polygon = parameters.cl_polygon
 
 # vypocet
-arcpy.Buffer_analysis (final_line, 'cont_line_final_poylgon', 'cl_size', 'LEFT', 'FLAT', '', '', 'PLANAR')
+arcpy.Buffer_analysis (final_line, cl_polygon, 'cl_size', 'LEFT', 'FLAT', '', '', 'PLANAR')
 
 
 end = time.time()

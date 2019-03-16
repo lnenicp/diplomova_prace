@@ -14,13 +14,17 @@ arcpy.env.workspace = '.\\{}.gdb'.format(work_dtb)
 workspace = arcpy.env.workspace
 
 # inputs
-cont_line = 'finito' #'contour_line_5000'
-basic_line = 'basic_line' # ve scriptu TC neni udelana jako promenna - dodelat
-map_scale = parameters.map_scale
-erase_size = 0.04 # parameters.erase_size # [mm], ted odpovida 0,2 [m]
-erase_size = my_utils.calculate_real_size(map_scale, erase_size)
+cont_line = parameters.cl_output_01
+basic_line = parameters.basic_line_name
 
-## udelat z basic line single part -- asi vyreseno
+# parameters
+map_scale = parameters.map_scale
+erase_size_value = parameters.erase_size_value
+erase_size = my_utils.calculate_real_size(map_scale, erase_size_value)
+
+# output
+cl_output = parameters.cl_output
+
 
 # priprava pruseciku tvarovych car
 points_int = arcpy.Intersect_analysis(cont_line, 'tmp_intersect', 'ALL', '', 'POINT')
@@ -32,18 +36,6 @@ arcpy.JoinField_management (points_single, 'OBJECTID', near, 'IN_FID')
 arcpy.JoinField_management (points_single, 'NEAR_FID', basic_line, 'OBJECTID')
 points = arcpy.CopyFeatures_management (points_single, 'tmp_points')
 
-"""
-# kouzleni
-# vyber tc, ktere prochazeji nejakymi body
-arcpy.MakeFeatureLayer_management (cont_line, 'cont_line_lyr')
-arcpy.SelectLayerByLocation_management ('cont_line_lyr', 'INTERSECT', points)
-arcpy.CopyFeatures_management('cont_line_lyr', 'tmp_cont_line')
-cont_line_single = arcpy.Dissolve_management('tmp_cont_line', 'tmp_cont_line_single', 'id_tc','', 'SINGLE_PART', 'DISSOLVE_LINES')
-
-cont_line_int = arcpy.SpatialJoin_analysis(cont_line_single, cont_line, 'tmp_cont_line_int', 'JOIN_ONE_TO_ONE','', '','SHARE_A_LINE_SEGMENT_WITH', '', '')
-"""
-
-#---------------NAHRADA KOUZELNI------------------------------
 # predpriprava linii - vrsva cont_line/finito se sklada z "miniusecek"
 cont_line_single = arcpy.Dissolve_management(cont_line, 'tmp_cont_line_single', 'id_tc','', 'SINGLE_PART', 'DISSOLVE_LINES')
 cont_line_ok = arcpy.SpatialJoin_analysis(cont_line_single, cont_line, 'tmp_cont_line_ok', 'JOIN_ONE_TO_ONE', '', '',
@@ -59,12 +51,8 @@ points_lyr = arcpy.MakeFeatureLayer_management (points, 'points_lyr')
 # priprava vystupni vrstvy
 sr = arcpy.Describe(cont_line).spatialReference
 cl_conflict = arcpy.CreateFeatureclass_management(workspace, 'cl_conflict', 'POLYLINE', '', '', '', sr)
-## asi smazat, slouzi jenom pro pokus
-#arcpy.AddField_management(cl_conflict, 'pomucka', 'SHORT')
 arcpy.AddField_management(cl_conflict, 'id_tc', 'SHORT')
 arcpy.AddField_management(cl_conflict, 'cl_size', 'DOUBLE')
-# fields = [f.name for f in arcpy.ListFields(cl_conflict)]
-# print('fields', fields)
 
 
 s_cursor = arcpy.da.SearchCursor(cont_line_int, ['Shape@','OBJECTID', 'id_tc', 'cl_size'])
@@ -122,18 +110,14 @@ for row in s_cursor:
             mi = mi + 1
     del measure_cursor
 
-    #print('measure_list',measure_list)
-
     complet_list = []
     c = 0
     for i in range(len(points_idbl_list)):
         item = [points_idbl_list[c], measure_list[c], id_point_list[c]]
         complet_list.append(item)
         c = c + 1
-    #print('complet_list',complet_list)
 
     complet_list_sorted = sorted(complet_list, key=lambda x: x[1])
-    # print('complet_list_sorted', complet_list_sorted)
 
     # pridam nulu, aby se mi snadneji tvorili 'segmentAlongLine'
     complet_list_sorted.insert(0, [0, 0, 0])
@@ -143,21 +127,12 @@ for row in s_cursor:
     complet_list_sorted.insert(len(complet_list_sorted), endpoint)
     print('complet_list_sorted', complet_list_sorted)
 
-    #print('delka listu', len(complet_list_sorted))
-
-    index = len(complet_list_sorted)- 2
-    #print('index', index)
-    #print(complet_list_sorted[index][2])
-
-
+    # index = len(complet_list_sorted)- 2
 
     i_cursor = arcpy.da.InsertCursor(cl_conflict, ['Shape@', 'id_tc', 'cl_size'])
     i = 0 # indexovani mista s hodnotou "measure"/ indexovani v listech
     # pos = 1 # indexovani pozice bodu (jak jdou za sebou) - jdu az od 1, protoze na prvnim/nultem miste je umele dosazena nula
     for item in complet_list_sorted:
-        #print('il', i)
-        #print('pos', pos)
-        #print(complet_list_sorted[i][2])
         aktual = i + 1
         previous = i
         next = i + 2
@@ -197,9 +172,7 @@ for row in s_cursor:
             line = shapeline.segmentAlongLine(start, end)
             i_cursor.insertRow([line, id_tc, cl_size])
 
-
         i = i + 1
-        #pos = pos + 1
 
     del i_cursor
 del s_cursor
@@ -215,21 +188,13 @@ cont_line_merge = arcpy.Merge_management ([cl_no_conflict, cl_conflict], "tmp_co
 
 
 cont_line_diss = arcpy.Dissolve_management(cont_line_merge, 'tmp_cont_line_diss', 'id_tc','', 'SINGLE_PART', 'DISSOLVE_LINES')
-final_line = arcpy.SpatialJoin_analysis(cont_line_diss, cont_line_ok, 'cont_line_final_line', 'JOIN_ONE_TO_ONE','', '','SHARE_A_LINE_SEGMENT_WITH', '', '')
+final_line = arcpy.SpatialJoin_analysis(cont_line_diss, cont_line_ok, cl_output, 'JOIN_ONE_TO_ONE','', '','SHARE_A_LINE_SEGMENT_WITH', '', '')
 
-"""
-# prevedeni linii tvarovych car na polygon
-arcpy.Buffer_analysis (final_line, 'cont_line_final_poylgon', 'cl_size', 'LEFT', 'FLAT', '', '', 'PLANAR')
-"""
-
-
-
-'''
 # "final cleaning"
 list = arcpy.ListFeatureClasses('tmp_*')
 for item in list:
     arcpy.Delete_management(item)
-'''
+
 
 end = time.time()
 print 'time', end-start
