@@ -154,10 +154,11 @@ def classify_contour_size(line_superelev, map_scale, contour_size_1, contour_siz
             value = float(calculate_real_size(map_scale, contour_size_3)) / bt
         row[1] = value
         u_cur.updateRow(row)
+    del u_cur
     return line_superelev
 
 
-def select_end_segments(line_superelev, output_fc):
+def select_extreme_segments(line_superelev, output_fc):
     '''
     Vybere pocatecni a koncovy segment linie
     :param line_superelev: liniova vstupni vrstva (skladajici se ze segmentu)
@@ -179,6 +180,35 @@ def select_end_segments(line_superelev, output_fc):
         max_id = max(segment_id_list)
 
         whereID_seg = '"OBJECTID" = {} OR "OBJECTID" = {}'.format(min_id, max_id)
+        arcpy.MakeFeatureLayer_management(line_superelev, 'tmp_segments_lyr', whereID_seg)
+        seg = arcpy.CopyFeatures_management('tmp_segments_lyr', 'tmp_segments')
+        arcpy.Append_management(seg, output_fc)
+        i = i + 1
+    return output_fc
+
+
+def select_end_segments(line_superelev, output_fc):
+    '''
+    Vybere pocatecni a koncovy segment linie
+    :param line_superelev: liniova vstupni vrstva (skladajici se ze segmentu)
+    :param output_fc: nazev vystupni vrstvy
+    :return: output_fc
+    '''
+    # vytvoreni prazdne fc (odpovidajicich atributu)
+    arcpy.CopyFeatures_management(line_superelev, output_fc)
+    arcpy.DeleteRows_management (output_fc)
+
+    # vytvoreni vrstvy krajnich segmentu linii - udolnic
+    line_id_list = create_list_of_values(line_superelev, 'id_line')
+    i = 0 # indexovani v list_id_line
+    for row in  line_id_list:
+        whereID = '"id_line" = {}'.format(line_id_list[i])
+        arcpy.MakeFeatureLayer_management(line_superelev, 'tmp_one_line', whereID)
+        segment_id_list = create_list_of_values('tmp_one_line', 'OBJECTID')
+        #min_id = min(segment_id_list)
+        max_id = max(segment_id_list)
+
+        whereID_seg = '"OBJECTID" = {}'.format(max_id) # OR "OBJECTID" = {} min_id,
         arcpy.MakeFeatureLayer_management(line_superelev, 'tmp_segments_lyr', whereID_seg)
         seg = arcpy.CopyFeatures_management('tmp_segments_lyr', 'tmp_segments')
         arcpy.Append_management(seg, output_fc)

@@ -19,11 +19,14 @@ left_buffer = parameters.left_LE_buffer_to_erase
 in_wall = parameters.in_wall
 contour_line = parameters.output_CL
 rock_contours = parameters.output_RC
+output_LE = parameters.output_LE
 
 # parameters
+map_scale = parameters.map_scale
 size_percent = parameters.size_percent
 minimum_valley_wall_height = parameters.minimum_valley_wall_height
 maximum_valley_wall_height = parameters.maximum_valley_wall_height
+contour_size_3 = parameters.contour_size_3
 
 # outputs
 mask = parameters.mask
@@ -31,6 +34,12 @@ cl_output_01 = parameters.cl_output_01
 
 
 ### ODMASKOVANI PUKLIN/UDOLNIC
+"UDOLNICE SE DOTYKAJI DOLNI HRANY"
+"---------------PRIDANO-----------------"
+valley_lyr = arcpy.MakeFeatureLayer_management (valley, 'valley_lyr')
+arcpy.SelectLayerByLocation_management (valley_lyr, 'BOUNDARY_TOUCHES',output_LE)
+valley_LE_touches = arcpy.CopyFeatures_management(valley_lyr, 'tmp_valley_LE_touches')
+
 # priprava/vytvoreni vystupni vrstvy
 sr = arcpy.Describe(valley).spatialReference
 mask_segments = arcpy.CreateFeatureclass_management(workspace, 'tmp_mask_segments', 'POLYLINE', '', '', '', sr)
@@ -39,7 +48,7 @@ arcpy.AddField_management (mask_segments, 'id_line', 'SHORT')
 
 ## pro kazdou udolnici se provede segmentace a nasledne se urci/interpoluje hodnota bufferu pro jednotlive segmenty
 # tyto udaje/hodnty se importuju do (vyse) vytvorene vystupni fc
-s_cursor = arcpy.da.SearchCursor(valley, ['Shape@', 'OBJECTID'])
+s_cursor = arcpy.da.SearchCursor(valley_LE_touches, ['Shape@', 'OBJECTID'])
 for row in s_cursor:
     shape = row[0]
     id_line = row[1]
@@ -95,7 +104,18 @@ arcpy.Erase_analysis (simplify, left_buffer, 'tmp_simplify_erase')
 arcpy.MultipartToSinglepart_management ('tmp_simplify_erase', 'tmp_multipart')
 arcpy.MakeFeatureLayer_management('tmp_multipart', 'multipart_lyr')
 arcpy.SelectLayerByAttribute_management('multipart_lyr', 'NEW_SELECTION', ' "Shape_Area" > 50 ')
-mask_valley = arcpy.CopyFeatures_management('multipart_lyr', 'tmp_mask_valley')
+mask_valley_LE_touches = arcpy.CopyFeatures_management('multipart_lyr', 'tmp_mask_valley_LE_touches')
+
+"UDOLNICE NAVAZUJE NA UDOLNICI"
+valley_lyr = arcpy.MakeFeatureLayer_management (valley, 'valley_lyr')
+arcpy.SelectLayerByLocation_management (valley_lyr, 'CROSSED_BY_THE_OUTLINE_OF', valley_LE_touches)
+valley_cross_valley = arcpy.CopyFeatures_management(valley_lyr, 'tmp_valley_cross_valley')
+
+buff_value = my_utils.calculate_real_size(map_scale, contour_size_3)
+mask_valley_cross_valley = arcpy.Buffer_analysis (valley_cross_valley, 'tmp_mask_valley_cross_valley', buff_value, 'FULL', 'FLAT', 'NONE', '', 'PLANAR')
+
+arcpy.Merge_management ([mask_valley_LE_touches, mask_valley_cross_valley], 'tmp_mask_valley_merge')
+mask_valley = arcpy.Dissolve_management ('tmp_mask_valley_merge', 'tmp_mask_valley')
 
 ### MASKA CELEK
 arcpy.Merge_management ([in_wall, mask_valley], 'tmp_merge')

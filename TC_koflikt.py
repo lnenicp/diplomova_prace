@@ -16,6 +16,7 @@ workspace = arcpy.env.workspace
 # inputs
 cont_line = parameters.cl_output_01
 basic_line = parameters.basic_line_name
+output_RC = parameters.output_RC
 
 # parameters
 map_scale = parameters.map_scale
@@ -38,6 +39,7 @@ points = arcpy.CopyFeatures_management (points_single, 'tmp_points')
 
 # predpriprava linii - vrsva cont_line/finito se sklada z "miniusecek"
 cont_line_single = arcpy.Dissolve_management(cont_line, 'tmp_cont_line_single', 'id_tc','', 'SINGLE_PART', 'DISSOLVE_LINES')
+# najoinovani informaci zpet (v minulem kroku byly ztraceny)
 cont_line_ok = arcpy.SpatialJoin_analysis(cont_line_single, cont_line, 'tmp_cont_line_ok', 'JOIN_ONE_TO_ONE', '', '',
                            'SHARE_A_LINE_SEGMENT_WITH', '', '')
 arcpy.MakeFeatureLayer_management (cont_line_ok, 'cont_line_lyr')
@@ -184,11 +186,20 @@ cont_line_all = arcpy.SelectLayerByAttribute_management (cont_line_lyr,'', '"OBJ
 cont_line_selected = arcpy.SelectLayerByLocation_management (cont_line_all, 'INTERSECT', cont_line_int, '', 'REMOVE_FROM_SELECTION', '')
 cl_no_conflict = arcpy.CopyFeatures_management (cont_line_selected, "tmp_cl_no_conflict")
 
-cont_line_merge = arcpy.Merge_management ([cl_no_conflict, cl_conflict], "tmp_cont_line_merge")
+# odstraneni tc, ktere protinaji konturu
+arcpy.MakeFeatureLayer_management (cl_no_conflict, 'cl_no_conflict_lyr')
+arcpy.SelectLayerByLocation_management ('cl_no_conflict_lyr', 'INTERSECT', output_RC)
+tc_to_erase = arcpy.CopyFeatures_management('cl_no_conflict_lyr', 'tmp_tc_to_erase')
+cl_no_conflict_bl = arcpy.Erase_analysis(cl_no_conflict, tc_to_erase,'tmp_no_conflict_bl')
+
+cont_line_merge = arcpy.Merge_management ([cl_no_conflict_bl, cl_conflict], "tmp_cont_line_merge")
 
 
 cont_line_diss = arcpy.Dissolve_management(cont_line_merge, 'tmp_cont_line_diss', 'id_tc','', 'SINGLE_PART', 'DISSOLVE_LINES')
 final_line = arcpy.SpatialJoin_analysis(cont_line_diss, cont_line_ok, cl_output, 'JOIN_ONE_TO_ONE','', '','SHARE_A_LINE_SEGMENT_WITH', '', '')
+
+
+
 
 # "final cleaning"
 list = arcpy.ListFeatureClasses('tmp_*')

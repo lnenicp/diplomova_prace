@@ -35,7 +35,7 @@ if arcpy.Exists (output_LE):
 # vytvoreni vrstvy dolnich hran
 arcpy.MakeFeatureLayer_management (in_edges, 'in_edges_lyr')
 arcpy.SelectLayerByAttribute_management('in_edges_lyr', 'NEW_SELECTION', lower_edge_description)
-lower_edges = arcpy.CopyFeatures_management('in_edges_lyr', 'tmp_lower_edges')
+lower_edges = arcpy.CopyFeatures_management('in_edges_lyr', 'lower_edges')
 
 # segmentace dolnich hran
 segments = my_utils.create_segments(lower_edges, segmentation_size)
